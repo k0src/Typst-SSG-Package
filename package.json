@@ -1,0 +1,54 @@
+{
+  "name": "typst-ssg",
+  "version": "0.1.0",
+  "description": "A static site generator using Typst for PDF-based webpages with hot reload and layout inheritance",
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "tssg": "./bin/tssg"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  },
+  "keywords": [
+    "typst",
+    "ssg",
+    "static-site-generator",
+    "static-site",
+    "pdf",
+    "documentation",
+    "typesetting",
+    "pdf-viewer",
+    "hot-reload",
+    "layout-system",
+    "markdown-alternative",
+    "typst-compiler",
+    "web-generator",
+    "site-builder"
+  ],
+  "author": "k0src",
+  "license": "MIT",
+  "dependencies": {
+    "@embedpdf/pdfium": "^1.5.0",
+    "chokidar": "^4.0.1",
+    "commander": "^12.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/k0src/Typst-SSG.git"
+  },
+  "bugs": {
+    "url": "https://github.com/k0src/Typst-SSG/issues"
+  },
+  "homepage": "https://github.com/k0src/Typst-SSG"
+}

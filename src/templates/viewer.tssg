@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="/assets/_viewer.css" />
+    <style>
+      {{customCss}}
+    </style>
+  </head>
+  <body>
+    <div id="loading">Loading...</div>
+    <div id="pdf-container"></div>
+    <script>
+      window.PDF_QUALITY = {{pdfQuality}};
+    </script>
+    <script type="module" src="/assets/_viewer.js"></script>
+    <script>
+      if (
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+      ) {
+        const evtSource = new EventSource("/__reload");
+        evtSource.onmessage = () => {
+          console.log("File changed, reloading...");
+          evtSource.close(); 
+          window.location.reload();
+        };
+        evtSource.onerror = (e) => {
+          evtSource.close();
+        };
+      }
+    </script>
+  </body>
+</html>
