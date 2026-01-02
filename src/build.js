@@ -417,7 +417,27 @@ function copyAllTypFiles(sourceDir, destDir, excludeDirs = []) {
 }
 
 /**
+ * Extract page title from Typst source
+ * @param {string} document - Typst source document
+ * @returns {string|null} Page title or null
+ */
+function extractPageTitle(document) {
+  const titleRegex = /#page-title\s*\(\s*"([^"]*)"\s*\)/g;
+  const matches = [...document.matchAll(titleRegex)];
+
+  if (matches.length > 0) {
+    return matches[matches.length - 1][1];
+  }
+
+  return null;
+}
+
+/**
  * Builds a single page
+ * @param {string[]} pagePathArray Path array to the page file
+ * @param {string} pageContent Content of the page file
+ * @param {Object} pagesTree Full pages tree object
+ * @param {Object} config Build configuration
  */
 async function buildPage(pagePathArray, pageContent, pagesTree, config) {
   let route = pathToRoute(pagePathArray);
@@ -452,6 +472,10 @@ async function buildPage(pagePathArray, pageContent, pagesTree, config) {
     config.layoutInheritance
   );
 
+  const pageTitle = extractPageTitle(document);
+  const defaultTitle = route.split("/").filter(Boolean).pop() || "Home";
+  const title = pageTitle || defaultTitle;
+
   const tempDirBase = createTempDir(TEMP_DIR_PREFIX, config.root);
 
   try {
@@ -471,7 +495,6 @@ async function buildPage(pagePathArray, pageContent, pagesTree, config) {
       throw new Error(result.error);
     }
 
-    const title = route.split("/").filter(Boolean).pop() || "Home";
     const viewerHtml = generateViewer(
       route,
       title,

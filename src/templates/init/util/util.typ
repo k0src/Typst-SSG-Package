@@ -33,3 +33,14 @@
     link(actual-dest, body-args.pos().at(0))
   }
 }
+
+// Set the page title. 
+// This function is also available in the Typst SSG Util package.
+// https://github.com/k0src/Typst-SSG-Util-Package
+
+#let page-title(title) = {
+  metadata((
+    type: "tssg-page-title",
+    title: title,
+  ))
+}
