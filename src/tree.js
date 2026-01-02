@@ -72,7 +72,24 @@ export function readTree(rootPath, options = {}) {
         }
 
         try {
-          result[entry] = fs.readFileSync(fullPath, "utf-8");
+          const ext = path.extname(entry).toLowerCase();
+          const textExtensions = [
+            ".typ",
+            ".css",
+            ".js",
+            ".html",
+            ".md",
+            ".txt",
+            ".json",
+            ".xml",
+            ".svg",
+          ];
+
+          if (textExtensions.includes(ext)) {
+            result[entry] = fs.readFileSync(fullPath, "utf-8");
+          } else {
+            result[entry] = fs.readFileSync(fullPath);
+          }
         } catch (error) {
           console.warn(`Could not read file ${fullPath}:`, error.message);
         }
