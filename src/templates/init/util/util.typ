@@ -2,14 +2,19 @@
 // You can import the Typst SSG Util package in any Typst file to use this function as well.
 // https://github.com/k0src/Typst-SSG-Util-Package
 
-#let base-url = state("site-link-base", "")
+#let _base-url = state("site-link-base", "")
 
 #let set-base(url) = {
-  base-url.update(url)
+  let clean-url = if url.ends-with("/") {
+    url.slice(0, -1)
+  } else {
+    url
+  }
+  _base-url.update(clean-url)
 }
 
 #let site-link(dest, ..body-args, same-tab: false) = context {
-  let base = base-url.get()
+  let base = _base-url.get()
 
   let full-dest = if base != "" and type(dest) == str {
     base + dest
