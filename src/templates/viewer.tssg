@@ -14,9 +14,17 @@
   </head>
   <body>
     <div id="loading">Loading...</div>
-    <div id="pdf-container"></div>
+    <div class="layout" data-has-sidebar="{{hasSidebar}}" data-has-toc="{{hasToc}}">
+      <aside class="sidebar-left" id="sidebar-container"></aside>
+      <main class="content">
+        <div id="pdf-container"></div>
+      </main>
+      <aside class="sidebar-right" id="toc-container"></aside>
+    </div>
     <script>
       window.PDF_QUALITY = {{pdfQuality}};
+      window.HAS_SIDEBAR = {{hasSidebar}};
+      window.HAS_TOC = {{hasToc}};
     </script>
     <script type="module" src="/assets/_viewer.js"></script>
     <script>

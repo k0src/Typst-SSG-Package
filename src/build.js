@@ -104,6 +104,9 @@ export async function build(options = {}) {
     layoutInheritance: userConfig.layoutInheritance,
     maxMergeDepth: userConfig.maxMergeDepth,
     pdfQuality: userConfig.pdfQuality,
+    sidebar: userConfig.sidebar,
+    toc: userConfig.toc,
+    theme: userConfig.theme,
   };
 
   const typstCheck = checkTypstInstalled();
@@ -418,7 +421,7 @@ function copyAllTypFiles(sourceDir, destDir, excludeDirs = []) {
 
 /**
  * Extract page title from Typst source
- * @param {string} document - Typst source document
+ * @param {string} document Typst source document
  * @returns {string|null} Page title or null
  */
 function extractPageTitle(document) {
@@ -430,6 +433,50 @@ function extractPageTitle(document) {
   }
 
   return null;
+}
+
+/**
+ * Extract page config from Typst source
+ * @param {string} document Typst source document
+ * @returns {Object} Page configuration
+ */
+function extractPageConfig(document) {
+  const configRegex = /#page-config\s*\(([\s\S]*?)\)/g;
+  const match = configRegex.exec(document);
+
+  const defaultConfig = {
+    sidebar: true,
+    toc: true,
+    tocMinLevel: 1,
+    tocMaxLevel: 4,
+  };
+
+  if (!match) return defaultConfig;
+
+  const configStr = match[1];
+  const config = { ...defaultConfig };
+
+  const sidebarMatch = configStr.match(/sidebar:\s*(true|false)/);
+  if (sidebarMatch) {
+    config.sidebar = sidebarMatch[1] === "true";
+  }
+
+  const tocMatch = configStr.match(/toc:\s*(true|false)/);
+  if (tocMatch) {
+    config.toc = tocMatch[1] === "true";
+  }
+
+  const minLevelMatch = configStr.match(/toc-min-level:\s*(\d+)/);
+  if (minLevelMatch) {
+    config.tocMinLevel = parseInt(minLevelMatch[1]);
+  }
+
+  const maxLevelMatch = configStr.match(/toc-max-level:\s*(\d+)/);
+  if (maxLevelMatch) {
+    config.tocMaxLevel = parseInt(maxLevelMatch[1]);
+  }
+
+  return config;
 }
 
 /**
@@ -476,6 +523,8 @@ async function buildPage(pagePathArray, pageContent, pagesTree, config) {
   const defaultTitle = route.split("/").filter(Boolean).pop() || "Home";
   const title = pageTitle || defaultTitle;
 
+  const pageConfig = extractPageConfig(document);
+
   const tempDirBase = createTempDir(TEMP_DIR_PREFIX, config.root);
 
   try {
@@ -495,11 +544,64 @@ async function buildPage(pagePathArray, pageContent, pagesTree, config) {
       throw new Error(result.error);
     }
 
+    const sidebarEnabled =
+      config.sidebar?.enabled !== false && pageConfig.sidebar;
+    let hasSidebar = false;
+
+    if (sidebarEnabled) {
+      const sidebarStructure = generateSidebarStructure(
+        pagesTree,
+        route,
+        config
+      );
+      const sidebarTypst = generateSidebarTypst(
+        sidebarStructure,
+        config.theme || {}
+      );
+      const sidebarPath = path.join(
+        config.output,
+        buildPaths.dir,
+        "sidebar.pdf"
+      );
+
+      const sidebarResult = await compileTypst({
+        source: sidebarTypst,
+        outputPath: sidebarPath,
+        workDir: tempDir,
+        rootDir: tempDirBase,
+      });
+
+      hasSidebar = sidebarResult.success && sidebarStructure.length > 0;
+    }
+
+    const tocEnabled = config.toc?.enabled !== false && pageConfig.toc;
+    let hasToc = false;
+
+    if (tocEnabled) {
+      const tocMinLevel = config.toc?.minLevel || pageConfig.tocMinLevel;
+      const tocMaxLevel = config.toc?.maxLevel || pageConfig.tocMaxLevel;
+
+      const headings = extractHeadings(document, tocMinLevel, tocMaxLevel);
+      const tocTypst = generateTocTypst(headings, config.theme || {});
+      const tocPath = path.join(config.output, buildPaths.dir, "toc.pdf");
+
+      const tocResult = await compileTypst({
+        source: tocTypst,
+        outputPath: tocPath,
+        workDir: tempDir,
+        rootDir: tempDirBase,
+      });
+
+      hasToc = tocResult.success && headings.length > 0;
+    }
+
     const viewerHtml = generateViewer(
       route,
       title,
       config.pdfQuality,
-      customCss
+      customCss,
+      hasSidebar,
+      hasToc
     );
     const htmlPath = path.join(config.output, buildPaths.htmlPath);
     fs.writeFileSync(htmlPath, viewerHtml, "utf-8");
@@ -844,15 +946,16 @@ export function composeCss(cssResult, cssInheritance = "fallback") {
  */
 function generateMinimalDocument(pageBody) {
   return `#set page(
-  width: 42em,
-  height: auto,
-  margin: (x: 0.25em, y: 0.25em),
-  fill: white
-)
+      width: 42em,
+      height: auto,
+      margin: (x: 0.25em, y: 0.25em),
+      fill: white
+    )
 
-#set text(fill: black)
+    #set text(fill: black)
 
-${pageBody}`;
+    ${pageBody}
+  `;
 }
 
 /**
@@ -965,16 +1068,27 @@ ${rewrittenPageBody}
  * @param {string} title Page title
  * @param {number} pdfQuality PDF quality multiplier (default 2.0)
  * @param {string} customCss Custom CSS to inject (default "")
+ * @param {boolean} hasSidebar Whether sidebar is enabled
+ * @param {boolean} hasToc Whether TOC is enabled
  * @returns {string} HTML string
  */
-export function generateViewer(route, title, pdfQuality = 2.0, customCss = "") {
+export function generateViewer(
+  route,
+  title,
+  pdfQuality = 2.0,
+  customCss = "",
+  hasSidebar = false,
+  hasToc = false
+) {
   const templatePath = new URL("./templates/viewer.tssg", import.meta.url);
   const template = fs.readFileSync(templatePath, "utf-8");
 
   return template
     .replace(/\{\{title\}\}/g, title)
     .replace(/\{\{pdfQuality\}\}/g, pdfQuality)
-    .replace(/\{\{customCss\}\}/g, customCss);
+    .replace(/\{\{customCss\}\}/g, customCss)
+    .replace(/\{\{hasSidebar\}\}/g, hasSidebar)
+    .replace(/\{\{hasToc\}\}/g, hasToc);
 }
 
 /**
@@ -1074,4 +1188,245 @@ export async function buildIncremental(changedFile, options = {}) {
     duration: Date.now() - startTime,
     errors,
   };
+}
+
+/**
+ * Generate sidebar structure from pages tree
+ * @param {Object} pagesTree Pages tree object
+ * @param {string} currentRoute Current page route for active highlighting
+ * @param {Object} config User config
+ * @returns {Array} Sidebar structure
+ */
+function generateSidebarStructure(pagesTree, currentRoute = "/", config = {}) {
+  function processNode(node, pathArray = [], depth = 0) {
+    const items = [];
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key.endsWith(".typ")) {
+        if (
+          key === "index.typ" &&
+          typeof value === "string" &&
+          isLayoutFile(value)
+        ) {
+          continue;
+        }
+
+        const pageName = key.replace(".typ", "");
+        const pagePath = [...pathArray, key];
+        let route = pathToRoute(pagePath);
+
+        if (config.indexPage && key === config.indexPage) {
+          route = "/";
+        }
+
+        if (config.sidebar?.exclude?.includes(route)) {
+          continue;
+        }
+
+        let title = pageName
+          .replace(/[-_]/g, " ")
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+
+        items.push({
+          type: "page",
+          title,
+          route,
+          active: route === currentRoute,
+          depth,
+        });
+      } else if (typeof value === "object" && !Buffer.isBuffer(value)) {
+        const folderPath = [...pathArray, key];
+        const children = processNode(value, folderPath, depth + 1);
+
+        if (children.length > 0) {
+          let title = key
+            .replace(/[-_]/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+
+          items.push({
+            type: "folder",
+            title,
+            children,
+            depth,
+          });
+        }
+      }
+    }
+
+    return items;
+  }
+
+  const structure = processNode(pagesTree);
+
+  structure.sort((a, b) => {
+    if (a.type === "page" && a.route === "/") return -1;
+    if (b.type === "page" && b.route === "/") return 1;
+    return 0;
+  });
+
+  return structure;
+}
+
+/**
+ * Generate Typst source for sidebar
+ * @param {Array} structure Sidebar structure
+ * @param {Object} theme Theme options
+ * @returns {string} Typst source
+ */
+function generateSidebarTypst(structure, theme = {}) {
+  const bgColor = theme.sidebarBg || "#f8f9fa";
+  const textColor = theme.sidebarTextColor || "#333";
+  const activeColor = theme.sidebarActiveColor || "#007bff";
+  const font = theme.sidebarFont || "Libertinus Serif";
+  const fontSize = theme.sidebarFontSize || "10pt";
+  const fontWeight = theme.sidebarFontWeight || "regular";
+  const folderFontSize = theme.sidebarFolderFontSize || "11pt";
+  const folderFontWeight = theme.sidebarFolderFontWeight || "bold";
+  const activeFontWeight = theme.sidebarActiveFontWeight || "bold";
+  const linkColor = theme.sidebarLinkColor || "#2c3e50";
+  const marginX = theme.sidebarMarginX || "1em";
+  const marginY = theme.sidebarMarginY || "1em";
+
+  let typst = `#set page(
+      width: 250pt, 
+      height: auto, 
+      margin: (
+        x: ${marginX}, 
+        y: ${marginY}
+      ), 
+      fill: rgb("${bgColor}")
+    )
+
+    #set text(
+      font: "${font}", 
+      size: ${fontSize}, 
+      weight: "${fontWeight}", 
+      fill: rgb("${textColor}")
+    )
+
+    #set par(leading: 0.65em)
+  `;
+
+  function renderItem(item, isFirst = false) {
+    if (item.type === "folder") {
+      let result = "";
+      if (!isFirst) result += "#v(0.5em)\n";
+      result += `#text(
+        weight: "${folderFontWeight}", 
+        size: ${folderFontSize}, 
+        fill: rgb("${textColor}")
+      )[${item.title}]\n\n`;
+      result += "#v(0.3em)\n\n";
+      item.children.forEach((child) => {
+        result += renderItem(child);
+      });
+      return result;
+    } else {
+      const indent = "  ".repeat(item.depth);
+      if (item.active) {
+        return `${indent}#text(
+          fill: rgb("${activeColor}"), 
+          weight: "${activeFontWeight}"
+        )[#link("tssg:sametab:${item.route}", [${item.title}])]\n\n`;
+      } else {
+        return `${indent}#text(
+          fill: rgb("${linkColor}")
+        )[#link("tssg:sametab:${item.route}", [${item.title}])]\n\n`;
+      }
+    }
+  }
+
+  structure.forEach((item, idx) => {
+    typst += renderItem(item, idx === 0);
+  });
+
+  return typst;
+}
+
+/**
+ * Extract headings from Typst source
+ * @param {string} source Typst source
+ * @param {number} minLevel Minimum heading level
+ * @param {number} maxLevel Maximum heading level
+ * @returns {Array} Heading structure
+ */
+function extractHeadings(source, minLevel = 1, maxLevel = 4) {
+  const headings = [];
+  const headingRegex = /^(={1,6})\s+(.+)$/gm;
+
+  let match;
+  while ((match = headingRegex.exec(source)) !== null) {
+    const level = match[1].length;
+    const text = match[2].trim();
+
+    if (level >= minLevel && level <= maxLevel) {
+      headings.push({
+        level,
+        text,
+        id: text
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^\w-]/g, ""),
+      });
+    }
+  }
+
+  return headings;
+}
+
+/**
+ * Generate Typst source for table of contents
+ * @param {Array} headings Heading structure
+ * @param {Object} theme Theme options
+ * @returns {string} Typst source
+ */
+function generateTocTypst(headings, theme = {}) {
+  const bgColor = theme.tocBg || "#f8f9fa";
+  const textColor = theme.tocTextColor || "#333";
+  const font = theme.tocFont || "Libertinus Serif";
+  const fontSize = theme.tocFontSize || "9pt";
+  const fontWeight = theme.tocFontWeight || "regular";
+  const titleFontSize = theme.tocTitleFontSize || "10pt";
+  const titleFontWeight = theme.tocTitleFontWeight || "bold";
+  const marginX = theme.tocMarginX || "1em";
+  const marginY = theme.tocMarginY || "1em";
+
+  let typst = `#set page(
+      width: 200pt, 
+      height: auto, 
+      margin: (
+        x: ${marginX},
+        y: ${marginY}
+      ), 
+      fill: rgb("${bgColor}")
+    )
+    #set text(
+      font: "${font}", 
+      size: ${fontSize}, 
+      weight: "${fontWeight}", 
+      fill: rgb("${textColor}")
+    )
+    #set par(leading: 0.65em)
+
+    #text(
+      weight: "${titleFontWeight}", 
+      size: ${titleFontSize}
+    )[On this page]
+
+    #v(0.5em)
+  `;
+
+  headings.forEach((heading) => {
+    const indent = "  ".repeat(heading.level - 1);
+    const size = Math.max(8, 10 - heading.level);
+    typst += `${indent}#text(
+      size: ${size}pt
+    )[${heading.text}]\n\n`;
+  });
+
+  return typst;
 }

@@ -459,4 +459,55 @@ function renderLinkLayer(
   pdfium.pdfium._free(urlBufferPtr);
 }
 
+async function renderSidebarPdf(pdfUrl, containerId) {
+  try {
+    const response = await fetch(pdfUrl);
+    if (!response.ok) return;
+
+    const pdfData = new Uint8Array(await response.arrayBuffer());
+    const pdfium = await init({
+      locateFile: (path, prefix) => {
+        if (path.endsWith(".wasm")) {
+          return "/assets/_pdfium/pdfium.wasm";
+        }
+        return prefix + path;
+      },
+    });
+
+    pdfium.PDFiumExt_Init();
+
+    const filePtr = pdfium.pdfium.wasmExports.malloc(pdfData.length);
+    pdfium.pdfium.HEAPU8.set(pdfData, filePtr);
+    const docPtr = pdfium.FPDF_LoadMemDocument(filePtr, pdfData.length, "");
+
+    if (!docPtr) return;
+
+    const pageCount = pdfium.FPDF_GetPageCount(docPtr);
+    const container = document.getElementById(containerId);
+
+    for (let i = 0; i < pageCount; i++) {
+      await renderPage(pdfium, docPtr, i, container);
+    }
+
+    pdfium.FPDF_CloseDocument(docPtr);
+    pdfium.pdfium.wasmExports.free(filePtr);
+  } catch (error) {
+    console.error(`Error loading ${pdfUrl}:`, error);
+  }
+}
+
 renderPdf();
+
+if (window.HAS_SIDEBAR) {
+  const sidebarUrl = window.location.pathname.endsWith("/")
+    ? window.location.pathname + "sidebar.pdf"
+    : window.location.pathname + "/sidebar.pdf";
+  renderSidebarPdf(sidebarUrl, "sidebar-container");
+}
+
+if (window.HAS_TOC) {
+  const tocUrl = window.location.pathname.endsWith("/")
+    ? window.location.pathname + "toc.pdf"
+    : window.location.pathname + "/toc.pdf";
+  renderSidebarPdf(tocUrl, "toc-container");
+}
