@@ -365,6 +365,4 @@ Contributions are welcome. Please open issues and pull requests for the npm pack
 
 ## License
 
-MIT
-
-See [LICENSE](LICENSE) for more information.
+[MIT](LICENSE)
