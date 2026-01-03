@@ -1111,6 +1111,9 @@ export async function buildIncremental(changedFile, options = {}) {
     layoutInheritance: userConfig.layoutInheritance,
     maxMergeDepth: userConfig.maxMergeDepth,
     pdfQuality: userConfig.pdfQuality,
+    sidebar: userConfig.sidebar,
+    toc: userConfig.toc,
+    theme: userConfig.theme,
   };
 
   const pagesDir = path.join(config.src, PAGES_DIR_NAME);
