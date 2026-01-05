@@ -29,6 +29,7 @@ export async function loadConfig(rootPath = ".") {
   const defaultConfig = {
     src: "./src",
     output: "./build",
+    base: "/",
     defaultLayout: null,
     indexPage: "index.typ",
     layoutInheritance: "fallback",

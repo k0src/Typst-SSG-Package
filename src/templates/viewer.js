@@ -1,10 +1,10 @@
-import { init } from "/assets/_pdfium/pdfium.esm.js";
-
 const TSSG_COPY_PREFIX = "tssg:copy:";
 const TSSG_SAMETAB_PREFIX = "tssg:sametab:";
 
 async function renderPdf() {
   try {
+    const base = window.BASE_PATH || "/";
+
     const pdfUrl = window.location.pathname.endsWith("/")
       ? window.location.pathname + "index.pdf"
       : window.location.pathname + "/index.pdf";
@@ -16,10 +16,11 @@ async function renderPdf() {
 
     const pdfData = new Uint8Array(await response.arrayBuffer());
 
+    const { init } = await import(`${base}assets/_pdfium/pdfium.esm.js`);
     const pdfium = await init({
       locateFile: (path, prefix) => {
         if (path.endsWith(".wasm")) {
-          return "/assets/_pdfium/pdfium.wasm";
+          return `${base}assets/_pdfium/pdfium.wasm`;
         }
         return prefix + path;
       },
@@ -461,14 +462,17 @@ function renderLinkLayer(
 
 async function renderSidebarPdf(pdfUrl, containerId) {
   try {
+    const base = window.BASE_PATH || "/";
+
     const response = await fetch(pdfUrl);
     if (!response.ok) return;
 
     const pdfData = new Uint8Array(await response.arrayBuffer());
+    const { init } = await import(`${base}assets/_pdfium/pdfium.esm.js`);
     const pdfium = await init({
       locateFile: (path, prefix) => {
         if (path.endsWith(".wasm")) {
-          return "/assets/_pdfium/pdfium.wasm";
+          return `${base}assets/_pdfium/pdfium.wasm`;
         }
         return prefix + path;
       },

@@ -100,6 +100,7 @@ export async function build(options = {}) {
     output: path.resolve(options.output || "./build"),
     clean: options.clean !== false,
     verbose: options.verbose || false,
+    base: userConfig.base || "/",
     indexPage: userConfig.indexPage,
     layoutInheritance: userConfig.layoutInheritance,
     maxMergeDepth: userConfig.maxMergeDepth,
@@ -601,7 +602,8 @@ async function buildPage(pagePathArray, pageContent, pagesTree, config) {
       config.pdfQuality,
       customCss,
       hasSidebar,
-      hasToc
+      hasToc,
+      config.base
     );
     const htmlPath = path.join(config.output, buildPaths.htmlPath);
     fs.writeFileSync(htmlPath, viewerHtml, "utf-8");
@@ -1078,17 +1080,21 @@ export function generateViewer(
   pdfQuality = 2.0,
   customCss = "",
   hasSidebar = false,
-  hasToc = false
+  hasToc = false,
+  base = "/"
 ) {
   const templatePath = new URL("./templates/viewer.tssg", import.meta.url);
   const template = fs.readFileSync(templatePath, "utf-8");
+
+  const basePath = base === "/" ? "/" : base.replace(/\/$/, "") + "/";
 
   return template
     .replace(/\{\{title\}\}/g, title)
     .replace(/\{\{pdfQuality\}\}/g, pdfQuality)
     .replace(/\{\{customCss\}\}/g, customCss)
     .replace(/\{\{hasSidebar\}\}/g, hasSidebar)
-    .replace(/\{\{hasToc\}\}/g, hasToc);
+    .replace(/\{\{hasToc\}\}/g, hasToc)
+    .replace(/\{\{base\}\}/g, basePath);
 }
 
 /**
@@ -1107,6 +1113,7 @@ export async function buildIncremental(changedFile, options = {}) {
     src: path.resolve(rootPath, userConfig.src || "./src"),
     output: path.resolve(options.output || "./build"),
     verbose: options.verbose || false,
+    base: userConfig.base || "/",
     indexPage: userConfig.indexPage,
     layoutInheritance: userConfig.layoutInheritance,
     maxMergeDepth: userConfig.maxMergeDepth,

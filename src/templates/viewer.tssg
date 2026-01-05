@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{title}}</title>
-    <link rel="stylesheet" href="/assets/_viewer.css" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
-    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+    <link rel="stylesheet" href="{{base}}assets/_viewer.css" />
+    <link rel="icon" type="image/png" sizes="32x32" href="{{base}}assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="{{base}}assets/favicon-16x16.png" />
+    <link rel="icon" type="image/x-icon" href="{{base}}assets/favicon.ico" />
     <style>
       {{customCss}}
     </style>
@@ -25,8 +25,9 @@
       window.PDF_QUALITY = {{pdfQuality}};
       window.HAS_SIDEBAR = {{hasSidebar}};
       window.HAS_TOC = {{hasToc}};
+      window.BASE_PATH = "{{base}}";
     </script>
-    <script type="module" src="/assets/_viewer.js"></script>
+    <script type="module" src="{{base}}assets/_viewer.js"></script>
     <script>
       if (
         window.location.hostname === "localhost" ||

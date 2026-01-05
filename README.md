@@ -138,11 +138,63 @@ Create a `tssg.config.js` file in your project root:
 
 ```javascript
 export default {
-  src: "./src", // Source directory (default: "./src")
-  indexPage: "index.typ", // Which file serves as index (default: "index.typ")
-  layoutInheritance: "fallback", // Layout mode: "none", "fallback", or "merge" (default: "fallback")
-  maxMergeDepth: 5, // Max layout depth in merge mode (default: 5)
-  pdfQuality: 2.0, // PDF render quality multiplier (default: 2.0)
+  // Source directory (default: "./src")
+  src: "./src",
+
+  // Output directory (default: "./build")
+  output: "./build",
+
+  // Base path for deployment (default: "/")
+  // For GitHub Pages project sites, use "/repo-name/"
+  // For user/org sites or custom domains, use "/"
+  base: "/",
+
+  // Which page maps to root route "/" (default: "index.typ")
+  indexPage: "index.typ",
+
+  // Layout inheritance: "none" | "fallback" | "merge" (default: "fallback")
+  // - none: Pages only use same-directory layout
+  // - fallback: Pages use nearest parent layout
+  // - merge: Pages merge all ancestor layouts' set statements
+  layoutInheritance: "fallback",
+
+  // Maximum layout merge depth (default: 5)
+  maxMergeDepth: 5,
+
+  // PDF rendering quality multiplier (default: 2.0)
+  // Higher = better quality but larger files and slower rendering
+  pdfQuality: 2.0,
+
+  // Sidebar configuration
+  sidebar: {
+    // Enable/disable sidebar globally (default: true)
+    enabled: true,
+  },
+
+  // Table of contents configuration
+  toc: {
+    // Enable/disable TOC globally (default: true)
+    enabled: true,
+
+    // Minimum heading level to include (default: 1)
+    // 1 = top-level headings only, 2 = second-level, etc.
+    minLevel: 1,
+
+    // Maximum heading level to include (default: 4)
+    maxLevel: 4,
+  },
+
+  // Theme configuration for sidebar and TOC
+  theme: {
+    // Sidebar styling
+    sidebarBg: "#f8f9fa", // Background color
+    sidebarTextColor: "#333", // Text color
+    sidebarActiveColor: "#007bff", // Active page highlight color
+
+    // TOC styling
+    tocBg: "#f8f9fa", // Background color
+    tocTextColor: "#333", // Text color
+  },
 };
 ```
 
