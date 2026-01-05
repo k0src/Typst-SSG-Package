@@ -6,6 +6,8 @@ Typst static site generator framework. Compiles Typst documents to PDF and rende
 - **[npm Package Repository](https://github.com/k0src/Typst-SSG-Package)**
 - [Typst Package Repository](https://github.com/k0src/Typst-SSG-Util-Package)
 
+[![npm version](https://badge.fury.io/js/typst-ssg.svg)](https://www.npmjs.com/package/typst-ssg)
+
 ## Installation
 
 ```bash
