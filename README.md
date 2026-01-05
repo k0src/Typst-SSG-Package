@@ -70,7 +70,7 @@ bin/
 
 ### Components
 
-#### Builder ([build.js](src/build.js))
+#### Builder
 
 - Runs the full build process and compiles all pages to PDF
 - Finds and applies layout files (`index.typ`) based on the inheritance mode
@@ -78,31 +78,31 @@ bin/
 - Builds dependency graphs for incremental rebuilds
 - Generates HTML viewer for each PDF
 
-#### Pipeline ([pipeline.js](src/pipeline.js))
+#### Pipeline
 
 - Converts file paths to URL routes (e.g., `blog/post.typ` → `/blog/post/`)
 - Maps routes to build output paths (`/blog/post/` → `blog/post/index.html`)
 - Generic object utilities for mapping and filtering
 
-#### CLI ([cli.js](src/cli.js))
+#### CLI
 
 - Implements `build`, `dev`, and `init` commands via Commander.js
 - Handles command-line arguments and flags
 - Creates new projects with `tssg init`
 
-#### File Tree ([tree.js](src/tree.js))
+#### File Tree
 
 - Reads directory structures into nested objects
 - Writes nested objects back to the filesystem
 - Utilities to walk, filter, and map over file trees
 
-#### Typst Adapter ([typst-adapter.js](src/typst-adapter.js))
+#### Typst Adapter
 
 - Checks if Typst is installed and gets version info
 - Compiles `.typ` source to PDF by spawning Typst CLI process
 - Manages temp files and handles compilation errors/timeouts
 
-#### PDF Viewer ([viewer.js](src/templates/viewer.js))
+#### PDF Viewer
 
 - Renders PDFs in the browser using PDFium compiled to WebAssembly
 - Creates text layer overlay for text selection
@@ -419,4 +419,4 @@ Contributions are welcome. Please open issues and pull requests for the npm pack
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/k0src/Typst-SSG-Package/blob/master/LICENSE)
