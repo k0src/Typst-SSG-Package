@@ -95,41 +95,100 @@ async function renderPage(pdfium, docPtr, pageIndex, container) {
 
   container.appendChild(pageDiv);
 
-  const bitmapPtr = pdfium.FPDFBitmap_Create(renderWidth, renderHeight, 0);
-  pdfium.FPDFBitmap_FillRect(
-    bitmapPtr,
-    0,
-    0,
-    renderWidth,
-    renderHeight,
-    0xffffffff
-  );
-  pdfium.FPDF_RenderPageBitmap(
-    bitmapPtr,
-    pagePtr,
-    0,
-    0,
-    renderWidth,
-    renderHeight,
-    0,
-    0x10 | 0x01 | 0x800
-  );
-
-  const bufferPtr = pdfium.FPDFBitmap_GetBuffer(bitmapPtr);
-  const bufferSize = renderWidth * renderHeight * 4;
-  const buffer = new Uint8Array(
-    pdfium.pdfium.HEAPU8.buffer,
-    pdfium.pdfium.HEAPU8.byteOffset + bufferPtr,
-    bufferSize
-  ).slice();
-  const imageData = new ImageData(
-    new Uint8ClampedArray(buffer.buffer),
-    renderWidth,
-    renderHeight
-  );
-
   const ctx = canvas.getContext("2d");
-  ctx.putImageData(imageData, 0, 0);
+
+  const fullPageMemory = renderWidth * renderHeight * 4;
+  const maxMemory = 10 * 1024 * 1024;
+
+  if (fullPageMemory > maxMemory) {
+    const maxTileSize = 2048;
+    const tilesX = Math.ceil(renderWidth / maxTileSize);
+    const tilesY = Math.ceil(renderHeight / maxTileSize);
+
+    for (let ty = 0; ty < tilesY; ty++) {
+      for (let tx = 0; tx < tilesX; tx++) {
+        const tileX = tx * maxTileSize;
+        const tileY = ty * maxTileSize;
+        const tileWidth = Math.min(maxTileSize, renderWidth - tileX);
+        const tileHeight = Math.min(maxTileSize, renderHeight - tileY);
+
+        const bitmapPtr = pdfium.FPDFBitmap_Create(tileWidth, tileHeight, 0);
+        pdfium.FPDFBitmap_FillRect(
+          bitmapPtr,
+          0,
+          0,
+          tileWidth,
+          tileHeight,
+          0xffffffff
+        );
+
+        pdfium.FPDF_RenderPageBitmap(
+          bitmapPtr,
+          pagePtr,
+          -tileX,
+          -tileY,
+          renderWidth,
+          renderHeight,
+          0,
+          0x10 | 0x01 | 0x800
+        );
+
+        const bufferPtr = pdfium.FPDFBitmap_GetBuffer(bitmapPtr);
+        const bufferSize = tileWidth * tileHeight * 4;
+        const buffer = new Uint8Array(
+          pdfium.pdfium.HEAPU8.buffer,
+          pdfium.pdfium.HEAPU8.byteOffset + bufferPtr,
+          bufferSize
+        ).slice();
+        const tileImageData = new ImageData(
+          new Uint8ClampedArray(buffer.buffer),
+          tileWidth,
+          tileHeight
+        );
+
+        ctx.putImageData(tileImageData, tileX, tileY);
+
+        pdfium.FPDFBitmap_Destroy(bitmapPtr);
+      }
+    }
+  } else {
+    const bitmapPtr = pdfium.FPDFBitmap_Create(renderWidth, renderHeight, 0);
+    pdfium.FPDFBitmap_FillRect(
+      bitmapPtr,
+      0,
+      0,
+      renderWidth,
+      renderHeight,
+      0xffffffff
+    );
+    pdfium.FPDF_RenderPageBitmap(
+      bitmapPtr,
+      pagePtr,
+      0,
+      0,
+      renderWidth,
+      renderHeight,
+      0,
+      0x10 | 0x01 | 0x800
+    );
+
+    const bufferPtr = pdfium.FPDFBitmap_GetBuffer(bitmapPtr);
+    const bufferSize = renderWidth * renderHeight * 4;
+    const buffer = new Uint8Array(
+      pdfium.pdfium.HEAPU8.buffer,
+      pdfium.pdfium.HEAPU8.byteOffset + bufferPtr,
+      bufferSize
+    ).slice();
+    const imageData = new ImageData(
+      new Uint8ClampedArray(buffer.buffer),
+      renderWidth,
+      renderHeight
+    );
+
+    ctx.putImageData(imageData, 0, 0);
+
+    pdfium.FPDFBitmap_Destroy(bitmapPtr);
+  }
 
   renderTextLayer(pdfium, pagePtr, textLayer, width, height, displayScale, dpr);
 
@@ -143,7 +202,6 @@ async function renderPage(pdfium, docPtr, pageIndex, container) {
     displayScale
   );
 
-  pdfium.FPDFBitmap_Destroy(bitmapPtr);
   pdfium.FPDF_ClosePage(pagePtr);
 }
 
